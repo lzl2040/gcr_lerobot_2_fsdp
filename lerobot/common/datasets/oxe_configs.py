@@ -730,7 +730,7 @@ OXE_DATASET_CONFIGS = {
     },
     ### calvin
     "calvin_abc_d": {
-        "image_obs_keys": {"primary": "image", "secondary": None, "wrist": "wrist_image"},
+        "image_obs_keys": {"primary": "primary", "secondary": "secondary", "wrist": None},
         "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
         "state_obs_keys": ["EEF_state", None, "gripper_state"],
         "state_encoding": StateEncoding.POS_EULER,
