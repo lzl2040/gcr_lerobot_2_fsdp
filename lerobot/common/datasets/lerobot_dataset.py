@@ -1542,6 +1542,7 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             image_obs_keys = data_config["image_obs_keys"]
             
             item = selected_dataset[selected_id]
+            # print(item.keys())
             item['dataset_name'] = dataset_name
             
             data_dict = self._fetch_data_dict(item, image_obs_keys)
@@ -1581,8 +1582,8 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                 
                 item[f"observation.images.{new_key}"] = copy.deepcopy(item[f"observation.images.{old_key}"])
                 exist_image = item[f"observation.images.{old_key}"]
-                
-                del item[f"observation.images.{old_key}"]
+                if new_key != old_key:
+                    del item[f"observation.images.{old_key}"]
             else:
                 # if missing, use zero image
                 key_to_pad.append(new_key)
@@ -1645,8 +1646,10 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             "image": [],
             "video": None
         }
+        # print(item.keys())
         all_image_keys = ["observation.images.primary", "observation.images.secondary", "observation.images.wrist"]
         present_img_keys = [key for key in all_image_keys if key in item]
+        # print(present_img_keys)
 
         if len(present_img_keys) == 0:
             raise ValueError(
@@ -1680,7 +1683,7 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                     vision["image"].append(item[key])
                 else:
                     logging.warning(f"Unexpected type for {key}: {type(item[key])}, from {item['source']}")
-
+        # print(vision)
         return vision
 
     def _prepare_language(self, vision, item):
