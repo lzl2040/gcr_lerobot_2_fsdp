@@ -8,6 +8,7 @@ OPTIMIZER_LR=2e-5
 SCHEDULER_WARMUP_STEPS=20000
 SCHEDULER_DECAY_STEPS=600000
 STEPS=600000
+DATA_MIX="libero"
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
@@ -77,7 +78,7 @@ torchrun \
     --dataset.repo_id="whatever" \
     --dataset.processor="/mnt/wangxiaofa/qwen_params/Qwen2.5-VL-7B-Instruct/" \
     --dataset.parent_dir="/mnt/wangxiaofa/robot_dataset/lerobot-format/" \
-    --dataset.data_mix="libero" \
+    --dataset.data_mix=$DATA_MIX \
     --policy.scheduler_warmup_steps=$SCHEDULER_WARMUP_STEPS \
     --policy.scheduler_decay_steps=$SCHEDULER_DECAY_STEPS \
     --policy.optimizer_lr=$OPTIMIZER_LR \
