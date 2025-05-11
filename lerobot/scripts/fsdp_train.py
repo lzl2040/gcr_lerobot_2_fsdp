@@ -223,7 +223,8 @@ def train(cfg: TrainPipelineConfig):
     policy = make_policy(
         cfg=cfg.policy,
         device="cpu",
-        ds_meta=dataset.meta
+        ds_meta=dataset.meta,
+        weight_pt_path="/mnt/wangxiaofa/original_qw/flow+05_0509_df100_full_Prometheus/step10000.pt"
     )
     
     # 设置模型全部参数为BF16
@@ -387,7 +388,7 @@ if __name__ == "__main__":
     # os.environ["TOKENIZERS_PARALLELISM"] = "false"
     # os.environ["OMPI_ALLOW_RUN_AS_ROOT"] = "1"
     # os.environ["OMPI_ALLOW_RUN_AS_ROOT_CONFIRM"] = "1"
-    os.environ['WANDB_API_KEY'] = '7f1c1acfe477063902c617b0e8ef24d2b76ed447'
+    os.environ['WANDB_API_KEY'] = '9e1c3ac77856b8ebb5573c4e1e250c84aabfb904'
     
     # 启动训练
     train()

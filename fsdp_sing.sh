@@ -4,9 +4,10 @@
 NNODES=1
 NPROC_PER_NODE=2
 JOB_NAME=""
-OPTIMIZER_LR=1e-4
-SCHEDULER_WARMUP_STEPS=10000
-SCHEDULER_DECAY_STEPS=1500000
+OPTIMIZER_LR=2e-5
+SCHEDULER_WARMUP_STEPS=20000
+SCHEDULER_DECAY_STEPS=600000
+STEPS=600000
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
@@ -80,11 +81,11 @@ torchrun \
     --policy.scheduler_warmup_steps=$SCHEDULER_WARMUP_STEPS \
     --policy.scheduler_decay_steps=$SCHEDULER_DECAY_STEPS \
     --policy.optimizer_lr=$OPTIMIZER_LR \
-    --steps=60_0000 \
+    --steps=$STEPS \
     --policy.train_main_layers=0 \
     --policy.freeze_vision_encoder=false \
     --policy.train_expert_only=false \
     --wandb.enable=true \
-    --wandb.project="qwen_pi0" \
+    --wandb.project="fsdp_qwen_pi0_ft" \
     --job_name="$JOB_NAME" \
     --log_dir="/mnt/wangxiaofa/logs"
