@@ -809,7 +809,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
                 frames = decode_video_frames_torchvision(
                     video_path, query_ts, self.tolerance_s, self.video_backend, return_all=True, return_type="image"
                 )
-                frames = [frame.resize((112, 112)) for frame in frames]
+                # frames = [frame.resize((112, 112)) for frame in frames]
                 # item[vid_key] = frames
             else:
                 frames = decode_video_frames_torchvision(
@@ -1399,12 +1399,10 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
         meta_features = None
         with open(vla2root_json, "r") as f:
             vla2data_root = json.load(f)
-        # print(included_datasets)
         for dataset_name in included_datasets:
             if dataset_name in vla2data_root.keys():
                 data_root = vla2data_root[dataset_name]
                 data_root = os.path.join(parent_dir, data_root)
-                # print(data_root)
                 repo_id = f"bulldog-{dataset_name}" # any
                 ds_meta = LeRobotDatasetMetadata(repo_id, root=data_root)
                 if meta_features == None:
@@ -1542,7 +1540,6 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             image_obs_keys = data_config["image_obs_keys"]
             
             item = selected_dataset[selected_id]
-            # print(item.keys())
             item['dataset_name'] = dataset_name
             
             data_dict = self._fetch_data_dict(item, image_obs_keys)
@@ -1582,8 +1579,8 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                 
                 item[f"observation.images.{new_key}"] = copy.deepcopy(item[f"observation.images.{old_key}"])
                 exist_image = item[f"observation.images.{old_key}"]
-                if new_key != old_key:
-                    del item[f"observation.images.{old_key}"]
+                
+                del item[f"observation.images.{old_key}"]
             else:
                 # if missing, use zero image
                 key_to_pad.append(new_key)
@@ -1646,10 +1643,8 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             "image": [],
             "video": None
         }
-        # print(item.keys())
         all_image_keys = ["observation.images.primary", "observation.images.secondary", "observation.images.wrist"]
         present_img_keys = [key for key in all_image_keys if key in item]
-        # print(present_img_keys)
 
         if len(present_img_keys) == 0:
             raise ValueError(
@@ -1671,6 +1666,7 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                 else:
                     vision['video'] = video
                 
+                vision["image"].append(vision["video"][-1].resize((224, 224)))
                 # Resize frames in the video
                 for i in range(len(vision['video'])):
                     vision["video"][i] = vision["video"][i].resize((112, 112))
@@ -1678,12 +1674,14 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             else:
                 if isinstance(item[key], list):
                     if len(item[key]) > 0:
-                        vision["image"].append(item[key][0])
+                        vision["image"].append(item[key][0].resize((224, 224)))
+                        # vision["image"].append(item[key][0])
                 elif isinstance(item[key], Image.Image):
-                    vision["image"].append(item[key])
+                    vision["image"].append(item[key].resize((224, 224)))
+                    # vision["image"].append(item[key])
                 else:
                     logging.warning(f"Unexpected type for {key}: {type(item[key])}, from {item['source']}")
-        # print(vision)
+
         return vision
 
     def _prepare_language(self, vision, item):

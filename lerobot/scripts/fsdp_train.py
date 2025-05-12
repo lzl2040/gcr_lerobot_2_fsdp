@@ -16,6 +16,7 @@
 import logging
 import time
 import os
+import glob
 import json
 import functools
 from pathlib import Path
@@ -167,7 +168,6 @@ def train(cfg: TrainPipelineConfig):
     master_ip = os.environ["MASTER_ADDR"]
     master_port = os.environ["MASTER_PORT"]
     master_uri = "tcp://%s:%s" % (master_ip, master_port)
-    print(f"DIST INFO: world_size={world_size}, local_rank={local_rank}, world_rank={world_rank}, node_rank={node_rank}, master_uri={master_uri}")
     dist.init_process_group(
         backend="nccl",
         init_method=master_uri,
@@ -186,6 +186,7 @@ def train(cfg: TrainPipelineConfig):
     # 初始化配置
     cfg.validate()
     logger = init_logger(cfg, rank)
+    logger.info(f"DIST INFO: world_size={world_size}, local_rank={local_rank}, world_rank={world_rank}, node_rank={node_rank}, master_uri={master_uri}")
     
     if int(os.environ.get('RANK', 0)) == 0:
         logger.info(pformat(cfg.to_dict()))
@@ -202,11 +203,24 @@ def train(cfg: TrainPipelineConfig):
         set_seed(cfg.seed)
     
     # 数据集初始化
+    
+    step = 1
+    seed = cfg.seed + rank
+    if cfg.resume:
+        logger.info("Resume is set, will model from checkpoint...")
+        os.makedirs(cfg.output_dir, exist_ok=True)
+        pts = sorted(glob.glob(os.path.join(cfg.output_dir, "*.pt")))
+        logger.info(f"Found {len(pts)} checkpoints, names are {pts}")
+        if pts:
+            steps = [int(os.path.basename(pt).split(".")[0].split("step")[1]) for pt in pts]
+            step = sorted(steps)[-1] + 1
+            seed += (step-1)
+            
     image_transforms = (ImageTransforms(cfg.dataset.image_transforms))
     dataset = MultiDatasetforDistTraining(
         cfg=cfg, 
         image_transforms=image_transforms,
-        seed=cfg.seed + rank,
+        seed=seed,
         data_mix=cfg.dataset.data_mix,
         vla2root_json="vla2root.json",
         # vla2root_json="vla2root_bak_single.json"
@@ -227,8 +241,19 @@ def train(cfg: TrainPipelineConfig):
         weight_pt_path="/mnt/wangxiaofa/original_qw/flow+05_0509_df100_full_Prometheus/step10000.pt"
     )
     
+    # 训练状态初始化
+    if cfg.resume:
+        if pts:
+            cfg.resume = os.path.join(cfg.output_dir, f"step{step-1}.pt")
+            logger.info(f"Resuming from checkpoint {cfg.resume} at step {step}")
+            model_state_dict = torch.load(cfg.resume, map_location="cpu")
+            policy.load_state_dict(model_state_dict, strict=True)
+        else:
+            cfg.resume = False
+            logger.info("No checkpoint found, starting from scratch.")
+            
     # 设置模型全部参数为BF16
-    logger.info("Setting model parameters to FP16...")
+    logger.info("Setting model parameters to BF16...")
     for params in policy.parameters():
         params.data = params.data.bfloat16()
         # params.data = params.data.to(dtype=torch.float16)
@@ -288,17 +313,15 @@ def train(cfg: TrainPipelineConfig):
         dataset,
         batch_size=cfg.batch_size,
         sampler=sampler,
-        num_workers=3,
+        num_workers=2,
         collate_fn=extra_collate_fn,
-        pin_memory=True,
+        pin_memory=False,
     )
     
     # 混合精度scaler
-    scaler = ShardedGradScaler()
+    # scaler = ShardedGradScaler()
     scaler = None
     
-    # 训练状态初始化
-    step = 1 
     # Metrics setup
     train_metrics = {
         "loss": AverageMeter("loss", ":.3f"),
@@ -326,6 +349,15 @@ def train(cfg: TrainPipelineConfig):
     
     fwd_bwd_time = 0
     dataloading_s = 0
+    
+    if cfg.resume:
+        logger.info("Setting up learning rate scheduler...")
+        for _ in range(step-1):
+            lr_scheduler.step()
+    
+    if rank == 0:
+        logger.info("Starting training loop...")
+        
     
     while step < cfg.steps:
         batch_start = time.perf_counter()
