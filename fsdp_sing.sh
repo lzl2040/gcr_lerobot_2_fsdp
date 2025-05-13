@@ -8,7 +8,7 @@ OPTIMIZER_LR=2e-5
 SCHEDULER_WARMUP_STEPS=10000
 SCHEDULER_DECAY_STEPS=300000
 STEPS=300000
-DATA_MIX="libero"
+DATA_MIX="simpler_fractal"
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
@@ -89,4 +89,5 @@ torchrun \
     --wandb.enable=true \
     --wandb.project="fsdp_qwen_pi0_ft" \
     --job_name="$JOB_NAME" \
-    --log_dir="/mnt/wangxiaofa/logs"
+    --log_dir="/mnt/wangxiaofa/logs" \
+    --resume
