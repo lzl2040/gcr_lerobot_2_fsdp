@@ -57,6 +57,10 @@ while [[ $# -gt 0 ]]; do
             SCHEDULER_DECAY_STEPS="$2"
             shift 2
             ;;
+        --steps)
+            STEPS="$2"
+            shift 2
+            ;;
         --scheduler_platform_steps)
             SCHEDULER_PLATFORM_STEPS="$2"
             shift 2
