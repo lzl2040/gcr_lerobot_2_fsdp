@@ -5,9 +5,9 @@ NNODES=1
 NPROC_PER_NODE=2
 JOB_NAME=""
 OPTIMIZER_LR=2e-5
-SCHEDULER_WARMUP_STEPS=20000
-SCHEDULER_DECAY_STEPS=600000
-STEPS=600000
+SCHEDULER_WARMUP_STEPS=10000
+SCHEDULER_DECAY_STEPS=300000
+STEPS=300000
 DATA_MIX="libero"
 
 # 解析命令行参数
@@ -37,8 +37,16 @@ while [[ $# -gt 0 ]]; do
             JOB_NAME="$2"
             shift 2
             ;;
+        --data_mix)
+            DATA_MIX="$2"
+            shift 2
+            ;;
         --optimizer_lr)
             OPTIMIZER_LR="$2"
+            shift 2
+            ;;
+        --scheduler_decay_lr)
+            OPTIMIZER_DECAY_LR="$2"
             shift 2
             ;;
         --scheduler_warmup_steps)
@@ -47,6 +55,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --scheduler_decay_steps)
             SCHEDULER_DECAY_STEPS="$2"
+            shift 2
+            ;;
+        --scheduler_platform_steps)
+            SCHEDULER_PLATFORM_STEPS="$2"
             shift 2
             ;;
         *)
