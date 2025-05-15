@@ -1627,6 +1627,10 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
         item["action"] = self.pad_vector(item["action"], self.max_action_dim)
         item["observation.state"] = self.pad_vector(item["observation.state"], self.max_state_dim)
         
+        # Normlize the action and observation vectors
+        item["action"] = (item["action"] - self.stats["action"]["mean"]) / (self.stats["action"]["std"] + 1e-8)
+        item["observation.state"] = (item["observation.state"] - self.stats["observation.state"]["mean"]) / (self.stats["observation.state"]["std"] + 1e-8)
+        
         vl_item = self._prepare_data(item)
         
         data_dict = {

@@ -4,11 +4,13 @@
 NNODES=1
 NPROC_PER_NODE=2
 JOB_NAME=""
-OPTIMIZER_LR=2e-5
-SCHEDULER_WARMUP_STEPS=10000
-SCHEDULER_DECAY_STEPS=300000
-STEPS=300000
-DATA_MIX="libero"
+OPTIMIZER_LR=2e-4
+OPTIMIZER_DECAY_LR=4e-6
+SCHEDULER_WARMUP_STEPS=5000
+SCHEDULER_DECAY_STEPS=25000
+SCHEDULER_PLATFORM_STEPS=50000
+STEPS=3000000
+DATA_MIX="simpler_fractal"
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
@@ -97,7 +99,9 @@ torchrun \
     --dataset.data_mix=$DATA_MIX \
     --policy.scheduler_warmup_steps=$SCHEDULER_WARMUP_STEPS \
     --policy.scheduler_decay_steps=$SCHEDULER_DECAY_STEPS \
+    --policy.scheduler_platform_steps=$SCHEDULER_PLATFORM_STEPS \
     --policy.optimizer_lr=$OPTIMIZER_LR \
+    --policy.scheduler_decay_lr=$OPTIMIZER_DECAY_LR \
     --steps=$STEPS \
     --policy.train_main_layers=0 \
     --policy.freeze_vision_encoder=false \
