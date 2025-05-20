@@ -41,6 +41,8 @@ class DatasetConfig:
     processor: str = "/mnt/wangxiaofa/qwen_params/Qwen2.5-VL-7B-Instruct/"
     parent_dir: str = "/mnt/wangxiaofa/robot_dataset/lerobot-format/"
     data_mix: str = "libero"
+    use_history_state: bool = False
+    sample_ratio: float = -1.0
 
 
 @dataclass

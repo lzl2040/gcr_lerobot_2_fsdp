@@ -447,6 +447,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
         download_videos: bool = True,
         video_backend: str | None = None,
         dataset_name: str | None = None,
+        use_history_state: bool = False,
     ):
         """
         2 modes are available for instantiating this class, depending on 2 different use cases:
@@ -561,6 +562,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
         self.video_backend = video_backend if video_backend else "pyav"
         self.delta_indices = None
         self.dataset_name = dataset_name
+        self.use_history_state = use_history_state
 
         # Unused attributes
         self.image_writer = None
@@ -820,6 +822,15 @@ class LeRobotDataset(torch.utils.data.Dataset):
 
         return item
 
+    def _query_history_index(self, idx: int, ep_idx:int, history_window_size = 40, key = "observation.state") -> int:
+        ep_start = self.episode_data_index["from"][ep_idx]
+        # history_idx = idx - history_window_size
+        # if history_idx < ep_start.item():
+        #     history_idx = ep_start.item()
+        query_indices = range(ep_start, idx + 1)
+        history_data = torch.stack(self.hf_dataset.select(query_indices)[key])
+        return history_data
+
     def _add_padding_keys(self, item: dict, padding: dict[str, list[bool]]) -> dict:
         for key, val in padding.items():
             item[key] = torch.BoolTensor(val)
@@ -840,6 +851,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
         if self.delta_indices is not None:
             query_indices, padding = self._get_query_indices(idx, ep_idx)
             query_result = self._query_hf_dataset(query_indices)
+            # print(query_result.keys()) # "action"
             item = {**item, **padding}
             for key, val in query_result.items():
                 item[key] = val
@@ -847,6 +859,7 @@ class LeRobotDataset(torch.utils.data.Dataset):
         if len(self.meta.video_keys) > 0:
             current_ts = item["timestamp"].item()
             query_timestamps = self._get_query_timestamps(current_ts, query_indices)
+            # print(query_timestamps)
             if query_indices is not None:
                 video_frames = self._query_videos(query_timestamps, ep_idx, primary_obs_key=primary_obs_key)
             else:
@@ -861,6 +874,10 @@ class LeRobotDataset(torch.utils.data.Dataset):
         # Add task as a string
         task_idx = item["task_index"].item()
         item["task"] = self.meta.tasks[task_idx]
+        
+        if self.use_history_state:
+            item["observation.state"] = self._query_history_index(idx, ep_idx, key="observation.state")
+            print(f"history_state shape: {item['observation.state'].shape} primary:{len(item['observation.images.primary'])}")   
 
         return item
 
@@ -1332,7 +1349,9 @@ class MultiLeRobotDataset(torch.utils.data.Dataset):
 
 
 class MultiDatasetforDistTraining(torch.utils.data.Dataset):
-    def __init__(self, cfg, image_transforms, seed: int = 1000, data_mix: str = "toy", vla2root_json: str = None, banlance_weight=True):
+    def __init__(self, cfg, image_transforms, seed: int = 1000, 
+                 data_mix: str = "toy", vla2root_json: str = None, 
+                 banlance_weight=True):
         """
         参数:
             cfg (TrainPipelineConfig): 训练配置文件
@@ -1415,6 +1434,7 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                     image_transforms=image_transforms,
                     video_backend=cfg.dataset.video_backend,
                     dataset_name=dataset_name,
+                    use_history_state=cfg.dataset.use_history_state,
                 )
                 self.datasets.append(dataset)
                 self.dataset_sizes.append(len(dataset))
@@ -1432,38 +1452,43 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             print(f"Banlanced:{sample_weights}")
         self.sample_weights = np.array(sample_weights) / np.sum(sample_weights)
         print(f"Final weights:{sample_weights}")
-        self.dataset_len = sum(self.dataset_sizes)
-        dataset_sample_counts = (self.sample_weights * self.dataset_len).astype(int)  # 计算子集大小
+        self.use_index = False
+        if cfg.dataset.sample_ratio > 0:
+            self.dataset_len = round(cfg.dataset.sample_ratio * sum(self.dataset_sizes))
+            self.use_index = True
+        else:
+            self.dataset_len = sum(self.dataset_sizes)
         
-        print(f"Dataset len:{self.dataset_len}")
-        print("Final sampling info:")
+        dataset_sample_counts = (self.sample_weights * self.dataset_len).astype(int)  # 计算子集大小
         table_data = [
             [self.dataset_names[i], len(self.datasets[i]), f"{self.sample_weights[i]:.4f}"]
             for i in range(len(self.datasets))
         ]
+        print(f"Dataset len:{self.dataset_len}")
+        print("Final sampling info:")
         print(tabulate(table_data, headers=["Dataset", "Samples", "Ratio"], tablefmt="grid"))
         # sample and use NamedSubset to contain dataset_name
         self.selected_indices = []
+        selected_subsets = []
         episode_count = 0
         for dataset, num_samples, dataset_name in zip(self.datasets, dataset_sample_counts, self.dataset_names):
             indices = list(range(len(dataset)))
-            # 这个不允许重复采样
-            # sampled_indices = random.sample(indices, min(num_samples, len(dataset)))  # 采样
-            # episode_this_dataset = int(dataset.num_episodes * (min(num_samples, len(dataset))/len(dataset)))
-            # 允许重复采样，当num_samples>len(dataset)时
-            # 部分采样
-            # sampled_indices = random.choices(indices, k=num_samples)
-            # 全采样
-            sampled_indices = random.choices(indices, k=len(indices))
+            if cfg.dataset.sample_ratio <= 0:
+                num_samples = len(indices)
+            sampled_indices = random.choices(indices, k=num_samples)
+            # print(len(sampled_indices), len(set(sampled_indices)))
             episode_this_dataset = int(dataset.num_episodes * (len(sampled_indices) / len(dataset)))
             episode_count += episode_this_dataset
             self.selected_indices.append(sampled_indices)
-            # selected_subsets.append(NamedSubset(dataset, sampled_indices, dataset_name))
+            selected_subsets.append(NamedSubset(dataset, sampled_indices, dataset_name))
         
         self.num_episodes = episode_count
 
         # concat the selected dataset
-        # self.dataset = ConcatDataset(selected_subsets)
+        if cfg.dataset.sample_ratio > 0:
+            self.dataset = ConcatDataset(selected_subsets)
+        else:
+            self.dataset = None
         
         # calculate stats
         self.max_action_dim = cfg.policy.max_action_dim
@@ -1502,7 +1527,6 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
         # finally create the meta class
         self.meta = LeRobotDatasetMetadata.create_with_stats_feats(stats=self.stats, features=meta_features) # Note: I added a class function
         self.meta.repo_id = "Prometheus"
-        self.dataset = None
     
     def pad_vector(self, vector, new_dim):
         """Can be (batch_size x sequence_length x features_dimension)
@@ -1530,17 +1554,23 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             if retry > max_retry:
                 break
             retry += 1
-            selected_dataset = random.choices(self.datasets, weights=self.sample_weights, k=1)[0]
-            dataset_index = self.datasets.index(selected_dataset)
-            dataset_name = self.dataset_names[dataset_index]
-            data_config = OXE_DATASET_CONFIGS[dataset_name]
-            indices = self.selected_indices[dataset_index] # the selected indices of this dataset
-            selected_id = random.choice(indices) # equal prob
-            
-            image_obs_keys = data_config["image_obs_keys"]
-            
-            item = selected_dataset[selected_id]
-            item['dataset_name'] = dataset_name
+            if self.use_index:
+                item = self.dataset[index]
+                dataset_name = item["dataset_name"]
+                data_config = OXE_DATASET_CONFIGS[dataset_name]
+                image_obs_keys = data_config["image_obs_keys"]
+            else:
+                selected_dataset = random.choices(self.datasets, weights=self.sample_weights, k=1)[0]
+                dataset_index = self.datasets.index(selected_dataset)
+                dataset_name = self.dataset_names[dataset_index]
+                data_config = OXE_DATASET_CONFIGS[dataset_name]
+                indices = self.selected_indices[dataset_index] # the selected indices of this dataset
+                selected_id = random.choice(indices) # equal prob
+                
+                image_obs_keys = data_config["image_obs_keys"]
+                
+                item = selected_dataset[selected_id]
+                item['dataset_name'] = dataset_name
             
             data_dict = self._fetch_data_dict(item, image_obs_keys)
             

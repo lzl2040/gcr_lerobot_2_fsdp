@@ -91,7 +91,8 @@ def decode_video_frames_torchvision(
             logging.info(f"frame loaded at timestamp={current_ts:.4f}")
         loaded_frames.append(frame["data"])
         loaded_ts.append(current_ts)
-        if current_ts >= last_ts:
+        if round(current_ts, 1) >= round(last_ts, 1):
+        # if current_ts >= last_ts:
             break
 
     if backend == "pyav":
