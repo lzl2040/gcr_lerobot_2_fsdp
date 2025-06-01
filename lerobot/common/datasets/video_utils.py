@@ -122,8 +122,15 @@ def decode_video_frames_torchvision(
         )
 
         if return_type == "tensor":
+            image_list = []
+            for idx in argmin_:
+                img = Image.fromarray(loaded_frames[idx].numpy().astype(np.uint8).transpose(1, 2, 0))
+                img = img.resize((224, 224))
+                img = torch.from_numpy(np.array(img)).permute(2, 0, 1)
+                image_list.append(img)
+            closest_frames = torch.stack(image_list)
             # get closest frames to the query timestamps
-            closest_frames = torch.stack([loaded_frames[idx] for idx in argmin_])
+            # closest_frames = torch.stack([loaded_frames[idx] for idx in argmin_])
             closest_ts = loaded_ts[argmin_]
 
             if log_loaded_timestamps:
@@ -149,7 +156,14 @@ def decode_video_frames_torchvision(
     else:
         if return_type == "tensor":
             loaded_ts = torch.tensor(loaded_ts)
-            closest_frames = torch.stack(loaded_frames)
+            image_list = []
+            for idx in range(len(loaded_frames)):
+                img = Image.fromarray(loaded_frames[idx].numpy().astype(np.uint8).transpose(1, 2, 0))
+                img = img.resize((224, 224))
+                img = torch.from_numpy(np.array(img)).permute(2, 0, 1)
+                image_list.append(img)
+            closest_frames = torch.stack(image_list)
+            # closest_frames = torch.stack(loaded_frames)
             # closest_frames = closest_frames.type(torch.float32) / 255
             
             if log_loaded_timestamps:

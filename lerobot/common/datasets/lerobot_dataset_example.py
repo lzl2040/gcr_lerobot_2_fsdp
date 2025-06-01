@@ -1567,6 +1567,7 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                 dataset_name = item["dataset_name"]
                 data_config = OXE_DATASET_CONFIGS[dataset_name]
                 image_obs_keys = data_config["image_obs_keys"]
+                
             else:
                 selected_dataset = random.choices(self.datasets, weights=self.sample_weights, k=1)[0]
                 dataset_index = self.datasets.index(selected_dataset)
@@ -1580,8 +1581,9 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                 item = selected_dataset[selected_id]
                 item['dataset_name'] = dataset_name
         item, is_pad_frame = self._fetch_data_dict(item, image_obs_keys=image_obs_keys)
-        for key in self.new_obs_image_keys:
-            print(key, item[key].shape)
+        
+        # for key in self.new_obs_image_keys:
+        #     print(key, item[key].shape)
         
         # save
         # self.save_item(item, is_pad_frame)
