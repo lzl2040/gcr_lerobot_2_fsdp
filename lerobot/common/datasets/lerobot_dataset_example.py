@@ -1629,12 +1629,15 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
         if not exist_image_valide:
             sample_image = torch.ones((self.cfg.dataset.default_image_size, self.cfg.dataset.default_image_size, self.cfg.dataset.default_channel_size))
         
+        sample_image = torch.ones((3, 224, 224))
         # print(sample_image)
         
+        primary_lost = False
         for new_key in key_to_pad:
             item[f"observation.images.{new_key}"] = copy.deepcopy(sample_image)
             if new_key == "primary":
-                item[f"observation.images.{new_key}"] = [item[f"observation.images.{new_key}"]]
+                item[f"observation.images.{new_key}"] = torch.stack([item[f"observation.images.{new_key}"] for _ in range(20)])
+                primary_lost = True
         
         # remove other image keys
         keys = list(item.keys())
@@ -1652,6 +1655,8 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             if frame_num > 1:
                 if frame_num >= 20:
                     item[key] = img_data[:20]
+                    if "primary" in key and primary_lost:
+                        is_pad_frame[key] = 20
                 else:
                     # fill with zero to get the lenght of 20
                     # 计算缺失帧数
