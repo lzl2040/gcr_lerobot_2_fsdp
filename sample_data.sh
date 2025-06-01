@@ -10,7 +10,7 @@ python \
     --dataset.parent_dir="/mnt/wangxiaofa/robot_dataset/lerobot-format/" \
     --dataset.data_mix="oxe_magic_soup_plus" \
     --dataset.use_history_state=false \
-    --dataset.sample_ratio=0.25 \
+    --dataset.sample_ratio=0.4 \
     --output_dir="qwen_flow" \
     --batch_size=256
     

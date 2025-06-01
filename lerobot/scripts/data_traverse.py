@@ -137,6 +137,7 @@ def train(cfg: TrainPipelineConfig):
         batch_size=cfg.batch_size,
         num_workers=16,
         # collate_fn=extra_collate_fn,
+        shuffle=False,
         pin_memory=False,
     )
     
