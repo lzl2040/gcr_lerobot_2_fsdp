@@ -1580,6 +1580,9 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
                 item = selected_dataset[selected_id]
                 item['dataset_name'] = dataset_name
         item, is_pad_frame = self._fetch_data_dict(item, image_obs_keys=image_obs_keys)
+        for key in self.new_obs_image_keys:
+            print(key, item[key].shape)
+        
         # save
         # self.save_item(item, is_pad_frame)
         item["is_pad_frame"] = is_pad_frame
@@ -1672,8 +1675,21 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
         item["observation.state"] = self.pad_vector(item["observation.state"], self.max_state_dim)
         
         # Normlize the action and observation vectors
-        item["action"] = (item["action"] - self.stats["action"]["mean"]) / (self.stats["action"]["std"] + 1e-8)
-        item["observation.state"] = (item["observation.state"] - self.stats["observation.state"]["mean"]) / (self.stats["observation.state"]["std"] + 1e-8)
+        if "agi" in item['dataset_name']:
+            item["action"] = (item["action"] - self.stats["action"]["mean"]) / (self.stats["action"]["std"] + 1e-8)
+            item["observation.state"] = (item["observation.state"] - self.stats["observation.state"]["mean"]) / (self.stats["observation.state"]["std"] + 1e-8)
+        else:
+            state_mean = torch.zeros(self.max_state_dim)
+            state_mean[:8] = self.stats["observation.state"]["mean"][:8]
+            state_std = torch.ones(self.max_state_dim)
+            state_std[:8] = self.stats["observation.state"]["std"][:8]
+            item["observation.state"] = (item["observation.state"] - state_mean) / (state_std + 1e-8)
+            
+            action_mean = torch.zeros(self.max_action_dim)
+            action_mean[:7] = self.stats["action"]["mean"][:7]
+            action_std = torch.ones(self.max_action_dim)
+            action_std[:7] = self.stats["action"]["std"][:7]
+            item["action"] = (item["action"] - action_mean) / (action_std + 1e-8)
         return item, is_pad_frame
 
 
