@@ -1532,9 +1532,9 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
         # finally create the meta class
         self.meta = LeRobotDatasetMetadata.create_with_stats_feats(stats=self.stats, features=meta_features) # Note: I added a class function
         self.meta.repo_id = "Prometheus"
-        self.preprocess_root = "/Data/lzl/debug_process_data"
-        os.makedirs(self.preprocess_root, exist_ok=True)
-        self.preprocess_data_num = 0
+        # self.preprocess_root = "/Data/lzl/debug_process_data"
+        # os.makedirs(self.preprocess_root, exist_ok=True)
+        # self.preprocess_data_num = 0
     
     def pad_vector(self, vector, new_dim):
         """Can be (batch_size x sequence_length x features_dimension)
