@@ -168,10 +168,12 @@ def train(cfg: TrainPipelineConfig):
                 # print(img_data.shape)
                 is_pad_frame[key] = batch["is_pad_frame"][key][b].item()
                 item[key] = img_data
+                print(key, item[key].shape)
             item["is_pad_frame"] = is_pad_frame
             item["source"] = batch["source"][b]
             save_item(preprocess_root, img_obs_key, item, data_num)
             data_num += 1
+            print(item["action"].shape, item["observation.state"].shape)
             print(f"Step={step} data num={data_num}")
                 
         
