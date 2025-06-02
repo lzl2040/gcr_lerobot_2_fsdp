@@ -1645,17 +1645,16 @@ class MultiDatasetforDistTraining(torch.utils.data.Dataset):
             if "images" in key and key not in new_keys:
                 del item[key]
                 
-        
         # pad history frame to 20 frames
         is_pad_frame = {}
         for key in new_keys:
             is_pad_frame[key] = -1
             img_data = item[key]
             frame_num = img_data.shape[0]
-            if frame_num > 1:
+            if frame_num >= 1 and "primary" in key:
                 if frame_num >= 20:
                     item[key] = img_data[:20]
-                    if "primary" in key and primary_lost:
+                    if primary_lost:
                         is_pad_frame[key] = 20
                 else:
                     # fill with zero to get the lenght of 20
