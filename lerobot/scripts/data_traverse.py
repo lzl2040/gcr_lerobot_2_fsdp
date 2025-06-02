@@ -135,7 +135,7 @@ def train(cfg: TrainPipelineConfig):
     dataloader = DataLoader(
         dataset,
         batch_size=cfg.batch_size,
-        num_workers=8,
+        num_workers=1,
         # collate_fn=extra_collate_fn,
         shuffle=False,
         pin_memory=False,

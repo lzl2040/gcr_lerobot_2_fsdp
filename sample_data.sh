@@ -12,5 +12,5 @@ python \
     --dataset.use_history_state=false \
     --dataset.sample_ratio=0.4 \
     --output_dir="qwen_flow" \
-    --batch_size=32
+    --batch_size=1
     
